@@ -1,10 +1,12 @@
-import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from fastapi.testclient import TestClient
 
 from app.database import Base, get_db
+from app.models import user, task
 from app.main import app
-from fastapi.testclient import TestClient
+
+import pytest
 import os
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
@@ -19,6 +21,8 @@ TestingSessionLocal = sessionmaker(
 
 @pytest.fixture(scope="function")
 def db():
+
+    Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
     connection = engine.connect()
@@ -29,7 +33,10 @@ def db():
     yield session
 
     session.close()
-    transaction.rollback()
+
+    if transaction.is_active:
+        transaction.rollback()
+
     connection.close()
 
 @pytest.fixture(scope="function")
@@ -43,3 +50,7 @@ def client(db):
     yield TestClient(app)
 
     app.dependency_overrides.clear()
+    
+from tests.fixtures.users import *
+from tests.fixtures.tasks import *
+from tests.fixtures.payloads import *

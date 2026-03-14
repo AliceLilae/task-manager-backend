@@ -1,7 +1,7 @@
-from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, UTC
+from typing import List
 
 from app.database import get_db
 from app.models.task import Task
@@ -62,7 +62,7 @@ def delete_task(task_id: int, db: Session = Depends(get_db)) :
     if task.deleted_at is not None:
         raise HTTPException(status_code=400, detail="Task déjà supprimée")
     
-    task.deleted_at = datetime.utcnow()
+    task.deleted_at = datetime.now(UTC)
     db.commit()
     db.refresh(task)
     return {"details" : "La tâche à bien été supprimer !"}

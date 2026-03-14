@@ -1,40 +1,60 @@
-from app.models.task import User
 
-from datetime import datetime, UTC
+def test_create_task_success(client, task_payload):
 
+    response = client.post("/tasks", json=task_payload)
 
-def test_read_root(client):
-    response = client.get("/")
     assert response.status_code == 200
-    assert response.json() == {"message": "TaskManager API"}
+
+    data = response.json()
+
+    assert data["title"] == task_payload["title"]
+    assert data["description"] == task_payload["description"]
+    assert data["user_id"] == task_payload["user_id"]
     
-def test_create_task(client, db):
-    user = User(
-        name="Test",
-        username="test",
-        email="test@test.com",
-        password_hash="hash",
-        created_at=datetime.now(UTC),
-        updated_at=datetime.now(UTC)
-    )
+def test_get_tasks(client, task):
 
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-
-    data = {
-        "title": "Test task",
-        "description": "testing api",
-        "status": "pending",
-        "user_id": user.id
-    }
-
-    response = client.post("/tasks", json=data)
+    response = client.get("/tasks")
 
     assert response.status_code == 200
 
-    body = response.json()
+    data = response.json()
 
-    assert body["title"] == "Test task"
-    assert body["description"] == "testing api"
-    assert body["user_id"] == user.id
+    assert len(data) == 1
+    assert data[0]["title"] == task.title
+    
+def test_get_task_by_id(client, task):
+
+    response = client.get(f"/tasks/{task.id}")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["id"] == task.id
+    assert data["title"] == task.title
+    
+def test_get_task_not_found(client):
+
+    response = client.get("/tasks/999")
+
+    assert response.status_code == 404
+    
+def test_delete_task(client, task):
+
+    response = client.delete(f"/tasks/{task.id}")
+
+    assert response.status_code == 200
+
+    response = client.get("/tasks")
+
+    data = response.json()
+
+    assert len(data) == 0
+    
+def test_delete_task_already_deleted(client, task):
+
+    client.delete(f"/tasks/{task.id}")
+
+    response = client.delete(f"/tasks/{task.id}")
+
+    assert response.status_code == 400
